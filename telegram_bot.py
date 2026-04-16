@@ -27,7 +27,17 @@ class TelegramBot:
     async def start(self):
         self._session = aiohttp.ClientSession()
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
-        await self.send("🟢 *Iron-Sentry ONLINE*\nDelivery pairs trading | Watching 2 pairs | ₹0 brokerage mode")
+        pnl = self._equity - self._starting
+        pnl_pct = (pnl / self._starting) * 100
+        direction = "📈" if pnl >= 0 else "📉"
+        await self.send(
+            f"🟢 *Iron-Sentry ONLINE*\n"
+            f"Delivery pairs trading | 2 pairs | ₹0 brokerage\n"
+            f"━━━━━━━━━━━━━━━\n"
+            f"💰 Capital   : ₹`{self._equity:,.2f}`\n"
+            f"🏦 Started   : ₹`{self._starting:,.2f}`\n"
+            f"{direction} P&L      : ₹`{pnl:+,.2f}` (`{pnl_pct:+.2f}%`)"
+        )
         logger.info("Telegram bot started.")
 
     async def stop(self):
