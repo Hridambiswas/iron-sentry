@@ -158,7 +158,9 @@ async def main():
     try:
         while True:
             prices = await get_prices()
-            risk.update_equity(trader.get_equity())
+            equity = trader.get_equity()
+            risk.update_equity(equity)
+            telegram.update_equity(equity)
 
             # Fan-out: all pair workers tick concurrently
             await asyncio.gather(*[w.tick(prices) for w in workers])

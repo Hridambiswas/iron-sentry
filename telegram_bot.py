@@ -5,7 +5,7 @@ import asyncio
 import aiohttp
 import logging
 from datetime import datetime
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, HEARTBEAT_INTERVAL_SEC
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, HEARTBEAT_INTERVAL_SEC, STARTING_CAPITAL
 
 logger = logging.getLogger("iron_sentry.telegram")
 
@@ -16,6 +16,11 @@ class TelegramBot:
     def __init__(self):
         self._session: aiohttp.ClientSession | None = None
         self._heartbeat_task: asyncio.Task | None = None
+        self._equity: float = STARTING_CAPITAL
+        self._starting: float = STARTING_CAPITAL
+
+    def update_equity(self, equity: float):
+        self._equity = equity
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -91,7 +96,17 @@ class TelegramBot:
     async def _heartbeat_loop(self):
         while True:
             await asyncio.sleep(HEARTBEAT_INTERVAL_SEC)
-            await self.send(f"💓 *Heartbeat* | `{_now()}` | Bot alive ✅")
+            pnl = self._equity - self._starting
+            pnl_pct = (pnl / self._starting) * 100
+            direction = "📈" if pnl >= 0 else "📉"
+            await self.send(
+                f"💓 *Heartbeat* | Bot alive ✅\n"
+                f"🕐 `{_now()}`\n"
+                f"━━━━━━━━━━━━━━━\n"
+                f"💰 Capital   : ₹`{self._equity:,.2f}`\n"
+                f"🏦 Started   : ₹`{self._starting:,.2f}`\n"
+                f"{direction} P&L      : ₹`{pnl:+,.2f}` (`{pnl_pct:+.2f}%`)"
+            )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
