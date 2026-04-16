@@ -17,23 +17,23 @@ PAPER_TRADING = True           # Flip to False only after Dhan account is live
 STARTING_CAPITAL = 5000.0      # INR
 
 # ─── Pairs ───────────────────────────────────────────────────────────────────
-# (leg_A, leg_B) — we go Long A / Short B when spread is low
+# Delivery pairs — both statistically cointegrated (ADF p=0.01, 60-day window)
+# All stocks under ₹450 so ₹1,750/leg buys multiple shares
 PAIRS: List[Tuple[str, str]] = [
-    ("INFY",       "TCS"),
-    ("HDFCBANK",   "ICICIBANK"),
-    ("MARUTI",     "BAJAJ-AUTO"),  # TATAMOTORS/M&M replaced — Yahoo Finance symbol broken
+    ("SAIL",  "NMDC"),        # Metal/Mining PSU — corr 0.90+
+    ("NTPC",  "POWERGRID"),   # Power PSU — corr 0.90+
 ]
 
 # ─── Z-Score Engine ──────────────────────────────────────────────────────────
-ZSCORE_WINDOW       = 30       # rolling window (bars) for mean/std
+ZSCORE_WINDOW       = 30       # 30 daily bars = ~6 weeks of trading history
 ZSCORE_ENTRY        = 2.5      # open position
 ZSCORE_EXIT         = 0.0      # close position (mean reversion)
 ZSCORE_STOP         = 4.0      # emergency exit — spread blowing out
 
 # ─── Risk ────────────────────────────────────────────────────────────────────
-MAX_POSITION_PCT    = 0.20     # max 20 % of capital per pair
-MAX_DRAWDOWN_PCT    = 0.05     # halt trading if daily drawdown > 5 %
-LEVERAGE            = 1.0      # Month 1-2: no leverage; raise slowly later
+MAX_POSITION_PCT    = 0.35     # 35% per leg = ₹1,750 on ₹5,000 capital
+MAX_DRAWDOWN_PCT    = 0.10     # halt at 10% daily drawdown (₹500 on ₹5,000)
+LEVERAGE            = 1.0      # Month 1-2: no leverage
 ORDER_TYPE          = "LIMIT"  # limit orders ONLY (no market orders)
 SLIPPAGE_BPS        = 5        # paper-trade assumption: 5 basis points
 
@@ -54,8 +54,8 @@ FORCE_CLOSE_TIME = "15:15"   # force-close all pairs before weekend
 
 # ─── Execution Safety ────────────────────────────────────────────────────────
 MAX_PRICE_AGE_SEC      = 30    # reject stale ticks older than 30 seconds
-MIN_PROFIT_THRESHOLD   = 0.003 # 0.3% minimum edge to cover STT + brokerage + GST
-MAX_CONCURRENT_PAIRS   = 1     # Month 1: 1 pair max; increase with capital
+MIN_PROFIT_THRESHOLD   = 0.002 # 0.2% minimum — delivery cost is only 0.1%, this gives 2x buffer
+MAX_CONCURRENT_PAIRS   = 1     # 1 pair at a time — preserves capital, avoid correlated blowups
 
 # ─── NSE Holidays 2026 ───────────────────────────────────────────────────────
 NSE_HOLIDAYS: List[str] = [

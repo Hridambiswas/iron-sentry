@@ -28,51 +28,52 @@ logger = logging.getLogger("iron_sentry.main")
 # ─────────────────────────────────────────────────────────────────────────────
 
 _NSE_SYMBOLS: dict[str, str] = {
-    "INFY":       "INFY.NS",
-    "TCS":        "TCS.NS",
-    "HDFCBANK":   "HDFCBANK.NS",
-    "ICICIBANK":  "ICICIBANK.NS",
-    "MARUTI":     "MARUTI.NS",
-    "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
+    "SAIL":      "SAIL.NS",
+    "NMDC":      "NMDC.NS",
+    "NTPC":      "NTPC.NS",
+    "POWERGRID": "POWERGRID.NS",
 }
 
-_last_prices: dict[str, float] = {}   # fallback if fetch fails
+_last_prices: dict[str, float] = {}  # fallback on network error
+_last_bar_date: str = ""             # prevents feeding same daily bar twice
 
 
-async def get_prices() -> dict[str, float]:
+async def get_prices() -> tuple[dict[str, float], str]:
     """
-    Fetches latest NSE prices via yfinance (15-20 min delayed).
-    Runs in a thread executor so it doesn't block the async loop.
-    Falls back to last known prices on network error.
+    Fetches daily closing prices from NSE via yfinance.
+    Returns (prices, bar_date) — bar_date is the date of the latest close.
+    Runs in thread executor so it doesn't block the async loop.
     Month 2+: replace body with Dhan WebSocket LTP call.
     """
     loop = asyncio.get_event_loop()
 
-    def _fetch() -> dict[str, float]:
+    def _fetch() -> tuple[dict[str, float], str]:
         ns_syms = list(_NSE_SYMBOLS.values())
-        data = yf.download(ns_syms, period="1d", interval="1m",
+        data = yf.download(ns_syms, period="90d", interval="1d",
                            progress=False, auto_adjust=True)
         prices = {}
+        bar_date = ""
         for sym, ns_sym in _NSE_SYMBOLS.items():
             try:
-                price = float(data[("Close", ns_sym)].dropna().values[-1])
+                series = data[("Close", ns_sym)].dropna()
+                price = float(series.values[-1])
                 if price > 0:
                     prices[sym] = price
+                    bar_date = str(series.index[-1].date())
             except Exception:
                 pass
-        return prices
+        return prices, bar_date
 
     try:
-        fresh = await loop.run_in_executor(None, _fetch)
+        fresh, bar_date = await loop.run_in_executor(None, _fetch)
         if fresh:
             _last_prices.update(fresh)
-            return dict(_last_prices)
         else:
-            logger.warning("yfinance returned empty prices — using last known")
-            return dict(_last_prices)
+            logger.warning("yfinance returned empty — using last known prices")
+        return dict(_last_prices), bar_date
     except Exception as e:
         logger.error(f"Price fetch failed: {e} — using last known prices")
-        return dict(_last_prices)
+        return dict(_last_prices), ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -82,20 +83,27 @@ async def get_prices() -> dict[str, float]:
 class PairWorker:
     def __init__(self, leg_a: str, leg_b: str,
                  telegram: TelegramBot, trader: PaperTrader, risk: RiskManager):
-        self.leg_a    = leg_a
-        self.leg_b    = leg_b
-        self.pair_id  = f"{leg_a}_{leg_b}"
-        self.engine   = ZScoreEngine(leg_a, leg_b)
-        self.telegram = telegram
-        self.trader   = trader
-        self.risk     = risk
-        self.in_trade = False
+        self.leg_a         = leg_a
+        self.leg_b         = leg_b
+        self.pair_id       = f"{leg_a}_{leg_b}"
+        self.engine        = ZScoreEngine(leg_a, leg_b)
+        self.telegram      = telegram
+        self.trader        = trader
+        self.risk          = risk
+        self.in_trade      = False
+        self._last_bar_date = ""  # skip duplicate daily bars
 
-    async def tick(self, prices: dict[str, float]):
+    async def tick(self, prices: dict[str, float], bar_date: str):
         pa = prices.get(self.leg_a)
         pb = prices.get(self.leg_b)
         if pa is None or pb is None:
             return
+
+        # Only feed a new daily bar into the engine — skip duplicates
+        if bar_date and bar_date == self._last_bar_date:
+            return
+        if bar_date:
+            self._last_bar_date = bar_date
 
         signal = self.engine.update(pa, pb)
         if signal is None:
@@ -185,16 +193,16 @@ async def main():
 
     try:
         while True:
-            prices = await get_prices()
+            prices, bar_date = await get_prices()
             equity = trader.get_equity()
             risk.update_equity(equity)
             telegram.update_equity(equity)
 
             # Fan-out: all pair workers tick concurrently
-            await asyncio.gather(*[w.tick(prices) for w in workers])
+            await asyncio.gather(*[w.tick(prices, bar_date) for w in workers])
 
-            # TODO: tune tick interval when live feed arrives
-            await asyncio.sleep(60)   # 1-minute bars during paper phase
+            # Daily delivery strategy — check every hour, engine only updates on new bar
+            await asyncio.sleep(3600)
 
     except asyncio.CancelledError:
         logger.info("Shutdown signal received.")

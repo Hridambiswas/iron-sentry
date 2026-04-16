@@ -27,7 +27,7 @@ class TelegramBot:
     async def start(self):
         self._session = aiohttp.ClientSession()
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
-        await self.send("🟢 *Iron-Sentry ONLINE*\nPaper trading active. Watching 3 pairs.")
+        await self.send("🟢 *Iron-Sentry ONLINE*\nDelivery pairs trading | Watching 2 pairs | ₹0 brokerage mode")
         logger.info("Telegram bot started.")
 
     async def stop(self):
