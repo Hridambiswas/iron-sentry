@@ -49,3 +49,27 @@ LOG_FILE = "iron_sentry.log"
 # ─── Market Hours (IST = UTC+5:30) ───────────────────────────────────────────
 MARKET_OPEN_IST  = "09:15"
 MARKET_CLOSE_IST = "15:30"
+LAST_ENTRY_TIME  = "15:15"   # no new positions after this
+FORCE_CLOSE_TIME = "15:15"   # force-close all pairs before weekend
+
+# ─── Execution Safety ────────────────────────────────────────────────────────
+MAX_PRICE_AGE_SEC      = 30    # reject stale ticks older than 30 seconds
+MIN_PROFIT_THRESHOLD   = 0.003 # 0.3% minimum edge to cover STT + brokerage + GST
+MAX_CONCURRENT_PAIRS   = 1     # Month 1: 1 pair max; increase with capital
+
+# ─── NSE Holidays 2026 ───────────────────────────────────────────────────────
+NSE_HOLIDAYS: List[str] = [
+    "2026-01-26",  # Republic Day
+    "2026-02-19",  # Chhatrapati Shivaji Maharaj Jayanti
+    "2026-03-14",  # Holi
+    "2026-04-10",  # Good Friday
+    "2026-04-14",  # Dr. Ambedkar Jayanti
+    "2026-05-01",  # Maharashtra Day
+    "2026-08-15",  # Independence Day
+    "2026-08-27",  # Ganesh Chaturthi
+    "2026-10-02",  # Gandhi Jayanti
+    "2026-10-21",  # Dussehra
+    "2026-11-05",  # Diwali (Laxmi Puja)
+    "2026-11-20",  # Gurunanak Jayanti
+    "2026-12-25",  # Christmas
+]

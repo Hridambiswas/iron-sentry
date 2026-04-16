@@ -60,16 +60,18 @@ class ZScoreEngine:
     # ── Internals ─────────────────────────────────────────────────────────────
 
     def _hedge_ratio(self) -> float:
-        """OLS: regress A on B, return slope (hedge ratio)."""
-        a = np.array(self._prices_a)
-        b = np.array(self._prices_b)
-        # ratio = cov(A,B) / var(B)
-        return float(np.cov(a, b)[0, 1] / np.var(b))
+        """OLS on log returns — avoids spurious regression on non-stationary raw prices."""
+        ra = np.diff(np.log(np.array(self._prices_a)))
+        rb = np.diff(np.log(np.array(self._prices_b)))
+        var_b = np.var(rb)
+        if var_b == 0:
+            return 1.0
+        return float(np.cov(ra, rb)[0, 1] / var_b)
 
     def _zscore(self, hedge_ratio: float) -> float:
-        a = np.array(self._prices_a)
-        b = np.array(self._prices_b)
-        spreads = a - hedge_ratio * b
+        ra = np.diff(np.log(np.array(self._prices_a)))
+        rb = np.diff(np.log(np.array(self._prices_b)))
+        spreads = ra - hedge_ratio * rb
         std = spreads.std()
         if std == 0:
             return 0.0

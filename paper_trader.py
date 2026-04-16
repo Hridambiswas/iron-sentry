@@ -41,6 +41,7 @@ class PaperTrader:
     def _init_db(self):
         c = self._db.cursor()
         c.executescript("""
+            PRAGMA journal_mode=WAL;
             CREATE TABLE IF NOT EXISTS trades (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
                 ts        TEXT,
