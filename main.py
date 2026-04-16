@@ -68,12 +68,17 @@ async def get_prices() -> tuple[dict[str, float], str]:
         return prices, bar_date
 
     try:
-        fresh, bar_date = await loop.run_in_executor(None, _fetch)
+        fresh, bar_date = await asyncio.wait_for(
+            loop.run_in_executor(None, _fetch), timeout=30.0
+        )
         if fresh:
             _last_prices.update(fresh)
         else:
             logger.warning("yfinance returned empty — using last known prices")
         return dict(_last_prices), bar_date
+    except asyncio.TimeoutError:
+        logger.warning("yfinance fetch timed out (30s) — using last known prices")
+        return dict(_last_prices), ""
     except Exception as e:
         logger.error(f"Price fetch failed: {e} — using last known prices")
         return dict(_last_prices), ""
