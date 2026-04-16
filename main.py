@@ -3,9 +3,10 @@
 
 import asyncio
 import logging
+import logging.handlers
 from datetime import datetime
 import yfinance as yf
-from config import PAIRS, STARTING_CAPITAL, PAPER_TRADING, LOG_FILE
+from config import PAIRS, STARTING_CAPITAL, PAPER_TRADING, LOG_FILE, MAX_CONCURRENT_PAIRS
 from zscore_engine  import ZScoreEngine
 from telegram_bot   import TelegramBot
 from paper_trader   import PaperTrader
@@ -16,7 +17,9 @@ logging.basicConfig(
     level   = logging.INFO,
     format  = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     handlers=[
-        logging.FileHandler(LOG_FILE),
+        logging.handlers.RotatingFileHandler(
+            LOG_FILE, maxBytes=10_000_000, backupCount=5  # 10MB per file, keep 5
+        ),
         logging.StreamHandler(),
     ],
 )
@@ -93,7 +96,7 @@ class PairWorker:
         self.in_trade      = False
         self._last_bar_date = ""  # skip duplicate daily bars
 
-    async def tick(self, prices: dict[str, float], bar_date: str):
+    async def tick(self, prices: dict[str, float], bar_date: str, open_pairs: int = 0):
         pa = prices.get(self.leg_a)
         pb = prices.get(self.leg_b)
         if pa is None or pb is None:
@@ -118,6 +121,9 @@ class PairWorker:
 
         # ── Entry ──────────────────────────────────────────────────────────
         if not self.in_trade and signal.action in ("ENTER_LONG_A", "ENTER_LONG_B"):
+            if open_pairs >= MAX_CONCURRENT_PAIRS:
+                logger.info(f"Entry blocked for {self.pair_id} — max concurrent pairs ({MAX_CONCURRENT_PAIRS}) reached")
+                return
             await self._open_pair(signal, prices)
 
         # ── Exit (mean reversion) ──────────────────────────────────────────
@@ -191,15 +197,30 @@ async def main():
         for a, b in PAIRS
     ]
 
+    _last_reset_date = ""
+
     try:
         while True:
+            today = datetime.now().strftime("%Y-%m-%d")
+
+            # Daily reset at start of each new calendar day
+            if today != _last_reset_date:
+                risk.reset_daily()
+                _last_reset_date = today
+                logger.info(f"Daily reset — {today}")
+
             prices, bar_date = await get_prices()
             equity = trader.get_equity()
             risk.update_equity(equity)
             telegram.update_equity(equity)
 
+            # Count currently open pairs to enforce MAX_CONCURRENT_PAIRS
+            open_pairs = sum(1 for w in workers if w.in_trade)
+
             # Fan-out: all pair workers tick concurrently
-            await asyncio.gather(*[w.tick(prices, bar_date) for w in workers])
+            await asyncio.gather(*[
+                w.tick(prices, bar_date, open_pairs) for w in workers
+            ])
 
             # Daily delivery strategy — check every hour, engine only updates on new bar
             await asyncio.sleep(3600)

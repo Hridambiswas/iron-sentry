@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime, time
 from config import (
     MAX_DRAWDOWN_PCT, MAX_ORDERS_PER_SEC,
-    MARKET_OPEN_IST, MARKET_CLOSE_IST,
+    MARKET_OPEN_IST, MARKET_CLOSE_IST, LAST_ENTRY_TIME, NSE_HOLIDAYS,
 )
 
 logger = logging.getLogger("iron_sentry.risk")
@@ -40,8 +40,12 @@ class RiskManager:
         """Master gate. Call before every order pair."""
         if self._halted:
             return False, f"HALTED: {self._halt_reason}"
+        if self._is_nse_holiday():
+            return False, f"NSE holiday — no trading today"
         if not self._market_open():
             return False, "Outside market hours (09:15–15:30 IST)"
+        if not self._before_last_entry_cutoff():
+            return False, f"Past last entry cutoff ({LAST_ENTRY_TIME} IST)"
         drawdown = self._drawdown(current_equity)
         if drawdown >= MAX_DRAWDOWN_PCT:
             self._halt(f"Daily drawdown {drawdown:.1%} ≥ {MAX_DRAWDOWN_PCT:.1%}")
@@ -131,6 +135,17 @@ class RiskManager:
         open_t  = time(*map(int, MARKET_OPEN_IST.split(":")))
         close_t = time(*map(int, MARKET_CLOSE_IST.split(":")))
         return open_t <= now <= close_t
+
+    @staticmethod
+    def _is_nse_holiday() -> bool:
+        today = datetime.now().strftime("%Y-%m-%d")
+        return today in NSE_HOLIDAYS
+
+    @staticmethod
+    def _before_last_entry_cutoff() -> bool:
+        now    = datetime.now().time()
+        cutoff = time(*map(int, LAST_ENTRY_TIME.split(":")))
+        return now <= cutoff
 
 
 # ── Smoke-test ────────────────────────────────────────────────────────────────
