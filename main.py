@@ -217,6 +217,10 @@ async def main():
             # Count currently open pairs to enforce MAX_CONCURRENT_PAIRS
             open_pairs = sum(1 for w in workers if w.in_trade)
 
+            logger.info(
+                f"Heartbeat | equity=₹{equity:.2f} | bar={bar_date or 'pending'} | open_pairs={open_pairs}"
+            )
+
             # Fan-out: all pair workers tick concurrently
             await asyncio.gather(*[
                 w.tick(prices, bar_date, open_pairs) for w in workers
