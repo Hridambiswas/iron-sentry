@@ -223,7 +223,7 @@ async def main():
             open_pairs = sum(1 for w in workers if w.in_trade)
 
             logger.info(
-                f"Heartbeat | equity=₹{equity:.2f} | bar={bar_date or 'pending'} | open_pairs={open_pairs}"
+                f"Heartbeat | equity=Rs.{equity:.2f} | bar={bar_date or 'pending'} | open_pairs={open_pairs}"
             )
 
             # Fan-out: all pair workers tick concurrently
