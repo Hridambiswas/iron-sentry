@@ -19,9 +19,9 @@ STARTING_CAPITAL = 5000.0      # INR
 # ─── Pairs ───────────────────────────────────────────────────────────────────
 # (leg_A, leg_B) — we go Long A / Short B when spread is low
 PAIRS: List[Tuple[str, str]] = [
-    ("INFY",        "TCS"),
-    ("HDFCBANK",    "ICICIBANK"),
-    ("TATAMOTORS",  "M&M"),
+    ("INFY",       "TCS"),
+    ("HDFCBANK",   "ICICIBANK"),
+    ("MARUTI",     "BAJAJ-AUTO"),  # TATAMOTORS/M&M replaced — Yahoo Finance symbol broken
 ]
 
 # ─── Z-Score Engine ──────────────────────────────────────────────────────────

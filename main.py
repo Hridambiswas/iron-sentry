@@ -3,8 +3,8 @@
 
 import asyncio
 import logging
-import random                     # ← remove when real feed is wired
 from datetime import datetime
+import yfinance as yf
 from config import PAIRS, STARTING_CAPITAL, PAPER_TRADING, LOG_FILE
 from zscore_engine  import ZScoreEngine
 from telegram_bot   import TelegramBot
@@ -24,27 +24,55 @@ logger = logging.getLogger("iron_sentry.main")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  PRICE FEED  (Month 1: simulated | Month 2+: replace with Dhan WebSocket)
+#  PRICE FEED  (Month 1: yfinance delayed | Month 2+: Dhan WebSocket)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# TODO: Replace this dict with live Dhan OHLC/LTP feed
-_MOCK_PRICES: dict[str, float] = {
-    "INFY":        1800.0,
-    "TCS":         3900.0,
-    "HDFCBANK":    1650.0,
-    "ICICIBANK":    900.0,
-    "TATAMOTORS":   950.0,
-    "M&M":         2800.0,
+_NSE_SYMBOLS: dict[str, str] = {
+    "INFY":       "INFY.NS",
+    "TCS":        "TCS.NS",
+    "HDFCBANK":   "HDFCBANK.NS",
+    "ICICIBANK":  "ICICIBANK.NS",
+    "MARUTI":     "MARUTI.NS",
+    "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
 }
+
+_last_prices: dict[str, float] = {}   # fallback if fetch fails
+
 
 async def get_prices() -> dict[str, float]:
     """
-    PAPER MODE: returns mock prices with random walk.
-    LIVE MODE : replace body with Dhan API / WebSocket call.
+    Fetches latest NSE prices via yfinance (15-20 min delayed).
+    Runs in a thread executor so it doesn't block the async loop.
+    Falls back to last known prices on network error.
+    Month 2+: replace body with Dhan WebSocket LTP call.
     """
-    for sym in _MOCK_PRICES:
-        _MOCK_PRICES[sym] *= (1 + random.gauss(0, 0.002))   # ±0.2 % per tick
-    return dict(_MOCK_PRICES)
+    loop = asyncio.get_event_loop()
+
+    def _fetch() -> dict[str, float]:
+        ns_syms = list(_NSE_SYMBOLS.values())
+        data = yf.download(ns_syms, period="1d", interval="1m",
+                           progress=False, auto_adjust=True)
+        prices = {}
+        for sym, ns_sym in _NSE_SYMBOLS.items():
+            try:
+                price = float(data[("Close", ns_sym)].dropna().values[-1])
+                if price > 0:
+                    prices[sym] = price
+            except Exception:
+                pass
+        return prices
+
+    try:
+        fresh = await loop.run_in_executor(None, _fetch)
+        if fresh:
+            _last_prices.update(fresh)
+            return dict(_last_prices)
+        else:
+            logger.warning("yfinance returned empty prices — using last known")
+            return dict(_last_prices)
+    except Exception as e:
+        logger.error(f"Price fetch failed: {e} — using last known prices")
+        return dict(_last_prices)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
