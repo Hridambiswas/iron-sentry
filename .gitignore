@@ -1,0 +1,8 @@
+.env
+*.db
+*.log
+__pycache__/
+*.pyc
+test_report.json
+main_restart.log
+watchdog.log
