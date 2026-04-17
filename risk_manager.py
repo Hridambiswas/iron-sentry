@@ -100,7 +100,7 @@ class RiskManager:
         self.daily_high   = current_equity if current_equity is not None else self.starting_equity
         self._halted      = False
         self._halt_reason = ""
-        logger.info(f"Risk manager daily reset — daily_high=₹{self.daily_high:.2f}")
+        logger.info(f"Risk manager daily reset — daily_high=Rs.{self.daily_high:.2f}")
 
     # ── Status ────────────────────────────────────────────────────────────────
 
