@@ -31,7 +31,8 @@ class PaperTrader:
     """
 
     def __init__(self):
-        self.capital   = STARTING_CAPITAL
+        self.capital        = STARTING_CAPITAL
+        self._realised_pnl  = 0.0
         self.positions: dict[str, dict] = {}   # symbol → {qty, avg_price, side}
         self._db = sqlite3.connect(DB_PATH, check_same_thread=False)
         self._init_db()
@@ -130,12 +131,21 @@ class PaperTrader:
             del self.positions[symbol]
             logger.info(f"[PAPER] CLOSED {symbol} | P&L ₹{trade_pnl:.2f}")
 
+        self._realised_pnl += pnl
         self._snapshot_equity()
         return round(pnl, 2)
 
     def get_equity(self) -> float:
-        """Mark-to-market equity (capital + open position value at avg cost)."""
-        return round(self.capital, 2)
+        """Mark-to-market equity: cash + open positions valued at avg entry cost."""
+        open_value = sum(
+            p["qty"] * p["avg_price"] if p["side"] == "LONG" else -p["qty"] * p["avg_price"]
+            for p in self.positions.values()
+        )
+        return round(self.capital + open_value, 2)
+
+    @property
+    def realised_pnl(self) -> float:
+        return round(self._realised_pnl, 2)
 
     # ── Internals ─────────────────────────────────────────────────────────────
 

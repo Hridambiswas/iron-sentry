@@ -95,12 +95,12 @@ class RiskManager:
         if equity > self.daily_high:
             self.daily_high = equity
 
-    def reset_daily(self):
-        """Call at market open each day."""
-        self.daily_high = self.starting_equity
-        self._halted    = False
+    def reset_daily(self, current_equity: float = None):
+        """Call at start of each new trading day with today's opening equity."""
+        self.daily_high   = current_equity if current_equity is not None else self.starting_equity
+        self._halted      = False
         self._halt_reason = ""
-        logger.info("Risk manager daily reset.")
+        logger.info(f"Risk manager daily reset — daily_high=₹{self.daily_high:.2f}")
 
     # ── Status ────────────────────────────────────────────────────────────────
 

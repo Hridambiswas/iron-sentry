@@ -4,9 +4,9 @@
 import asyncio
 import logging
 import logging.handlers
-from datetime import datetime
+from datetime import datetime, time as _dtime
 import yfinance as yf
-from config import PAIRS, STARTING_CAPITAL, PAPER_TRADING, LOG_FILE, MAX_CONCURRENT_PAIRS
+from config import PAIRS, STARTING_CAPITAL, PAPER_TRADING, LOG_FILE, MAX_CONCURRENT_PAIRS, FORCE_CLOSE_TIME
 from zscore_engine  import ZScoreEngine
 from telegram_bot   import TelegramBot
 from paper_trader   import PaperTrader
@@ -169,6 +169,19 @@ class PairWorker:
                 f"⚠️ Leg failure on {self.pair_id}. Check ghost orders!")
             self.risk.clear_pair(self.pair_id)
 
+    async def force_close(self, prices: dict[str, float]):
+        """Force-close open position — used for Friday EOD and manual halt."""
+        if not self.in_trade:
+            return
+        pnl = await self.trader.close_pair(self.pair_id, prices)
+        self.in_trade = False
+        self.risk.clear_pair(self.pair_id)
+        await self.telegram.send(
+            f"🗓 *WEEKEND CLOSE* | `{self.pair_id}`\n"
+            f"Force-closed before weekend gap\nRealised P&L: ₹{pnl:.2f}"
+        )
+        logger.info(f"{self.pair_id} force-closed for weekend | P&L ₹{pnl:.2f}")
+
     async def _close_pair(self, signal, prices):
         pnl = await self.trader.close_pair(self.pair_id, prices)
         self.in_trade = False
@@ -184,6 +197,52 @@ class PairWorker:
 # ─────────────────────────────────────────────────────────────────────────────
 #  MAIN LOOP
 # ─────────────────────────────────────────────────────────────────────────────
+
+async def warmup_engines(workers: list) -> str:
+    """
+    Feed all available historical daily bars into each engine so signals
+    are available on the very first tick, instead of waiting 30+ hours.
+    Returns the date of the last bar fed.
+    """
+    loop = asyncio.get_event_loop()
+
+    def _fetch_history():
+        ns_syms = list(_NSE_SYMBOLS.values())
+        return yf.download(ns_syms, period="90d", interval="1d",
+                           progress=False, auto_adjust=True)
+
+    try:
+        data = await asyncio.wait_for(
+            loop.run_in_executor(None, _fetch_history), timeout=60.0
+        )
+    except Exception as e:
+        logger.error(f"Warmup fetch failed: {e}")
+        return ""
+
+    last_bar_date = ""
+    n_bars = len(data.index)
+    for i, ts in enumerate(data.index):
+        bar_date = str(ts.date())
+        prices: dict[str, float] = {}
+        for sym, ns_sym in _NSE_SYMBOLS.items():
+            try:
+                price = float(data[("Close", ns_sym)].iloc[i])
+                if price > 0 and price == price:  # NaN check without numpy import
+                    prices[sym] = price
+            except Exception:
+                pass
+
+        for w in workers:
+            pa = prices.get(w.leg_a)
+            pb = prices.get(w.leg_b)
+            if pa and pb:
+                w.engine.update(pa, pb)
+                w._last_bar_date = bar_date
+        last_bar_date = bar_date
+
+    logger.info(f"Warmup complete — fed {n_bars} historical bars, last bar={last_bar_date}")
+    return last_bar_date
+
 
 async def main():
     logger.info("=" * 60)
@@ -202,22 +261,29 @@ async def main():
         for a, b in PAIRS
     ]
 
+    logger.info("Warming up z-score engines with historical data...")
+    await warmup_engines(workers)
+    logger.info("Engines ready — entering main loop")
+
     _last_reset_date = ""
+
+    _force_close_time = _dtime(*map(int, FORCE_CLOSE_TIME.split(":")))
 
     try:
         while True:
-            today = datetime.now().strftime("%Y-%m-%d")
-
-            # Daily reset at start of each new calendar day
-            if today != _last_reset_date:
-                risk.reset_daily()
-                _last_reset_date = today
-                logger.info(f"Daily reset — {today}")
+            now   = datetime.now()
+            today = now.strftime("%Y-%m-%d")
 
             prices, bar_date = await get_prices()
             equity = trader.get_equity()
             risk.update_equity(equity)
             telegram.update_equity(equity)
+
+            # Daily reset — must happen after equity is fetched so daily_high is correct
+            if today != _last_reset_date:
+                risk.reset_daily(equity)
+                _last_reset_date = today
+                logger.info(f"Daily reset — {today}")
 
             # Count currently open pairs to enforce MAX_CONCURRENT_PAIRS
             open_pairs = sum(1 for w in workers if w.in_trade)
@@ -226,10 +292,17 @@ async def main():
                 f"Heartbeat | equity=Rs.{equity:.2f} | bar={bar_date or 'pending'} | open_pairs={open_pairs}"
             )
 
-            # Fan-out: all pair workers tick concurrently
-            await asyncio.gather(*[
-                w.tick(prices, bar_date, open_pairs) for w in workers
-            ])
+            # Friday force-close: prevent carrying open positions over weekend gap
+            is_friday = now.weekday() == 4
+            if is_friday and now.time() >= _force_close_time:
+                for w in workers:
+                    if w.in_trade:
+                        await w.force_close(prices)
+            else:
+                # Fan-out: all pair workers tick concurrently
+                await asyncio.gather(*[
+                    w.tick(prices, bar_date, open_pairs) for w in workers
+                ])
 
             # Daily delivery strategy — check every hour, engine only updates on new bar
             await asyncio.sleep(3600)
