@@ -6,3 +6,4 @@ __pycache__/
 test_report.json
 main_restart.log
 watchdog.log
+# iron-sentry
