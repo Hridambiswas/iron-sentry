@@ -11,6 +11,24 @@
 
 ---
 
+## 📊 Analysis Graphs
+
+Visualisation scripts are in `graphs/`. Run from the repo root:
+
+```bash
+python graphs/zscore_spread.py      # Z-score spread with entry/exit bands for both pairs
+python graphs/pair_correlation.py   # Rolling 30-day correlation and OLS hedge ratio
+python graphs/pnl_simulation.py     # Paper-trading cumulative P&L over 252 trading days
+```
+
+| Script | What it shows |
+|---|---|
+| `zscore_spread.py` | Z-score time series with ±2σ entry / ±0.5σ exit bands and long/short signal markers |
+| `pair_correlation.py` | Rolling Pearson correlation + OLS β for SAIL/NMDC and NTPC/POWERGRID |
+| `pnl_simulation.py` | Cumulative P&L curve + daily return distribution for both pairs |
+
+---
+
 ## 📌 Overview
 
 Iron-Sentry is a fully autonomous **statistical arbitrage / pairs trading system** that monitors correlated NSE stock pairs 24/7, executes mean-reversion trades when the z-score of the spread diverges beyond a configurable threshold, and manages all risk automatically — with zero human intervention required during operation.
