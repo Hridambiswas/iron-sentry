@@ -302,7 +302,8 @@ async def main():
     _trades_today: int = 0
     _forced_today: bool = False
 
-    _force_close_time = _dtime(*map(int, FORCE_CLOSE_TIME.split(":")))
+    _force_close_time   = _dtime(*map(int, FORCE_CLOSE_TIME.split(":")))
+    _forced_entry_time  = _dtime(*map(int, FORCED_ENTRY_TIME.split(":")))
 
     try:
         while True:
