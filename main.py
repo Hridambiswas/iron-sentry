@@ -299,6 +299,8 @@ async def main():
     logger.info("Engines ready — entering main loop")
 
     _last_reset_date = ""
+    _trades_today: int = 0
+    _forced_today: bool = False
 
     _force_close_time = _dtime(*map(int, FORCE_CLOSE_TIME.split(":")))
 
