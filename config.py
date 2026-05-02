@@ -25,7 +25,7 @@ PAIRS: List[Tuple[str, str]] = [
 ]
 
 # ─── Z-Score Engine ──────────────────────────────────────────────────────────
-ZSCORE_WINDOW       = 30       # 30 daily bars = ~6 weeks of trading history
+ZSCORE_WINDOW       = 20       # 20 daily bars = ~4 weeks of trading history
 ZSCORE_ENTRY        = 1.5      # open position
 ZSCORE_EXIT         = 0.5      # close position (mean reversion) — z within ±0.5 = near-zero spread
 ZSCORE_STOP         = 4.0      # emergency exit — spread blowing out
