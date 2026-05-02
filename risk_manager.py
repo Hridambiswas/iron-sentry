@@ -87,6 +87,9 @@ class RiskManager:
         vals = list(legs.values())
         return len(vals) == 2 and vals[0] != vals[1]
 
+    def record_trade(self):
+        self.daily_trade_count += 1
+
     def clear_pair(self, pair_id: str):
         self._pending_legs.pop(pair_id, None)
 
