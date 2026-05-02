@@ -30,6 +30,8 @@ class ZScoreEngine:
         self.window = window
         self._prices_a: deque = deque(maxlen=window)
         self._prices_b: deque = deque(maxlen=window)
+        self._last_signal: Optional[Signal] = None
+        self._last_zscore: float = 0.0
 
     # ── Public API ────────────────────────────────────────────────────────────
 
