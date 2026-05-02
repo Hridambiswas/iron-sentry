@@ -132,7 +132,7 @@ class PaperTrader:
 
             pnl += trade_pnl
             del self.positions[symbol]
-            logger.info(f"[PAPER] CLOSED {symbol} | P&L ₹{trade_pnl:.2f}")
+            logger.info(f"[PAPER] CLOSED {symbol} | P&L ₹{trade_pnl:.2f} | pairs today={self.daily_trade_count}")
 
         self._realised_pnl += pnl
         self._snapshot_equity()
