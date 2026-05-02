@@ -353,6 +353,31 @@ async def main():
                 ])
                 _trades_today += sum(1 for opened in tick_results if opened)
 
+            # Daily minimum trade — force-enter if no trade taken by FORCED_ENTRY_TIME
+            if (DAILY_MIN_TRADES > 0
+                    and _trades_today == 0
+                    and not _forced_today
+                    and not risk.is_halted
+                    and now.time() >= _forced_entry_time):
+                best_worker = _find_best_idle_worker(workers)
+                if best_worker is not None:
+                    logger.info(
+                        f"No trades by {FORCED_ENTRY_TIME} — forcing entry on {best_worker.pair_id}"
+                    )
+                    opened = await best_worker.forced_tick(prices)
+                    if opened:
+                        _trades_today += 1
+                        risk.record_trade()
+                        telegram.record_trade()
+                        await telegram.alert_forced_trade(
+                            best_worker.pair_id,
+                            best_worker.engine.last_zscore,
+                            best_worker.engine.forced_action(),
+                        )
+                else:
+                    logger.info("No idle workers available for forced entry")
+                _forced_today = True
+
             # Daily delivery strategy — check every hour, engine only updates on new bar
             await asyncio.sleep(3600)
 
