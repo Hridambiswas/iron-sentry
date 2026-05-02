@@ -33,6 +33,7 @@ class RiskManager:
 
         # Ghost order tracking: pair_id → {"A": bool, "B": bool}
         self._pending_legs: dict[str, dict] = {}
+        self.daily_trade_count: int = 0
 
     # ── Pre-trade Checks ──────────────────────────────────────────────────────
 
