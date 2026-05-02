@@ -66,6 +66,10 @@ class ZScoreEngine:
     def last_signal(self) -> Optional[Signal]:
         return self._last_signal
 
+    @property
+    def last_zscore(self) -> float:
+        return self._last_zscore
+
     # ── Internals ─────────────────────────────────────────────────────────────
 
     def _hedge_ratio(self) -> float:
