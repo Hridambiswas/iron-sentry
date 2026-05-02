@@ -5,7 +5,7 @@ import asyncio
 import aiohttp
 import logging
 from datetime import datetime
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, HEARTBEAT_INTERVAL_SEC, STARTING_CAPITAL
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, HEARTBEAT_INTERVAL_SEC, STARTING_CAPITAL, DAILY_MIN_TRADES, FORCED_ENTRY_TIME
 
 logger = logging.getLogger("iron_sentry.telegram")
 
