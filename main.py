@@ -169,6 +169,35 @@ class PairWorker:
                 f"⚠️ Leg failure on {self.pair_id}. Check ghost orders!")
             self.risk.clear_pair(self.pair_id)
 
+    async def forced_tick(self, prices: dict[str, float]) -> bool:
+        """Force-enter best signal direction ignoring z-score threshold."""
+        if self.in_trade:
+            return True  # already in trade, counts
+        pa = prices.get(self.leg_a)
+        pb = prices.get(self.leg_b)
+        if pa is None or pb is None:
+            return False
+        if self.engine.last_signal is None:
+            return False  # engine not warmed up
+        ok, reason = self.risk.can_trade(self.trader.get_equity())
+        if not ok:
+            logger.warning(f"Forced entry blocked for {self.pair_id}: {reason}")
+            return False
+        from zscore_engine import Signal
+        z = self.engine.last_zscore
+        action = self.engine.forced_action()
+        signal = Signal(
+            pair=(self.leg_a, self.leg_b),
+            zscore=z,
+            spread=self.engine.last_signal.spread,
+            action=action,
+            leg_a=self.leg_a,
+            leg_b=self.leg_b,
+        )
+        logger.info(f"{self.pair_id} | FORCED ENTRY | z={z:+.4f} | {action}")
+        await self._open_pair(signal, prices)
+        return self.in_trade
+
     async def force_close(self, prices: dict[str, float]):
         """Force-close open position — used for Friday EOD and manual halt."""
         if not self.in_trade:
