@@ -101,39 +101,43 @@ class PairWorker:
         self.in_trade      = False
         self._last_bar_date = ""  # skip duplicate daily bars
 
-    async def tick(self, prices: dict[str, float], bar_date: str, open_pairs: int = 0):
+    async def tick(self, prices: dict[str, float], bar_date: str, open_pairs: int = 0) -> bool:
         pa = prices.get(self.leg_a)
         pb = prices.get(self.leg_b)
         if pa is None or pb is None:
-            return
+            return False
 
         # Only feed a new daily bar into the engine — skip duplicates
         if bar_date and bar_date == self._last_bar_date:
-            return
+            return False
         if bar_date:
             self._last_bar_date = bar_date
 
         signal = self.engine.update(pa, pb)
         if signal is None:
-            return   # still warming up
+            return False   # still warming up
 
         logger.info(f"{self.pair_id} | z={signal.zscore:+.4f} | {signal.action}")
 
         ok, reason = self.risk.can_trade(self.trader.get_equity())
         if not ok:
             logger.warning(f"Trade blocked for {self.pair_id}: {reason}")
-            return
+            return False
 
         # ── Entry ──────────────────────────────────────────────────────────
         if not self.in_trade and signal.action in ("ENTER_LONG_A", "ENTER_LONG_B"):
             if open_pairs >= MAX_CONCURRENT_PAIRS:
                 logger.info(f"Entry blocked for {self.pair_id} — max concurrent pairs ({MAX_CONCURRENT_PAIRS}) reached")
-                return
+                return False
             await self._open_pair(signal, prices)
+            return self.in_trade
 
         # ── Exit (mean reversion) ──────────────────────────────────────────
         elif self.in_trade and signal.action in ("EXIT", "STOP"):
             await self._close_pair(signal, prices)
+            return False
+
+        return False
 
     async def _open_pair(self, signal, prices):
         if signal.action == "ENTER_LONG_A":
