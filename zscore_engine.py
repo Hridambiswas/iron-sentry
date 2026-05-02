@@ -70,6 +70,12 @@ class ZScoreEngine:
     def last_zscore(self) -> float:
         return self._last_zscore
 
+    def forced_action(self) -> str:
+        """Best entry direction based on z-sign, used for forced daily trade."""
+        if self._last_zscore >= 0:
+            return "ENTER_LONG_B"
+        return "ENTER_LONG_A"
+
     # ── Internals ─────────────────────────────────────────────────────────────
 
     def _hedge_ratio(self) -> float:
