@@ -161,6 +161,7 @@ class PairWorker:
             self.risk.confirm_leg(self.pair_id, "A")
             self.risk.confirm_leg(self.pair_id, "B")
             self.in_trade = True
+            self.risk.record_trade()
             await self.telegram.alert_signal(
                 (self.leg_a, self.leg_b), signal.zscore, signal.action)
             await self.telegram.alert_trade(
