@@ -50,7 +50,7 @@ class ZScoreEngine:
         zscore      = self._zscore(hedge_ratio)
         action      = self._action(zscore)
 
-        return Signal(
+        signal = Signal(
             pair    = (self.leg_a, self.leg_b),
             zscore  = round(zscore, 4),
             spread  = round(spread, 4),
@@ -58,6 +58,9 @@ class ZScoreEngine:
             leg_a   = self.leg_a,
             leg_b   = self.leg_b,
         )
+        self._last_signal = signal
+        self._last_zscore = zscore
+        return signal
 
     # ── Internals ─────────────────────────────────────────────────────────────
 
