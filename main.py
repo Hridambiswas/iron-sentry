@@ -318,6 +318,10 @@ async def main():
             # Daily reset — must happen after equity is fetched so daily_high is correct
             if today != _last_reset_date:
                 risk.reset_daily(equity)
+                trader.reset_daily()
+                telegram.reset_daily_trades()
+                _trades_today = 0
+                _forced_today = False
                 _last_reset_date = today
                 logger.info(f"Daily reset — {today}")
 
