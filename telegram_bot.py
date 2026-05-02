@@ -23,6 +23,12 @@ class TelegramBot:
     def update_equity(self, equity: float):
         self._equity = equity
 
+    def record_trade(self):
+        self._daily_trades += 1
+
+    def reset_daily_trades(self):
+        self._daily_trades = 0
+
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async def start(self):
