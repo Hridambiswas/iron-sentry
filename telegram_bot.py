@@ -102,6 +102,16 @@ class TelegramBot:
         )
         await self.send(msg)
 
+    async def alert_forced_trade(self, pair_id: str, zscore: float, action: str):
+        await self.send(
+            f"🎯 *DAILY MIN TRADE*\n"
+            f"Pair   : `{pair_id}`\n"
+            f"Action : `{action}`\n"
+            f"Z-Score: `{zscore:+.3f}`\n"
+            f"Reason : No trades by {FORCED_ENTRY_TIME} IST\n"
+            f"Time   : `{_now()}`"
+        )
+
     async def alert_risk(self, reason: str):
         await self.send(f"⚠️ *RISK ALERT*\n{reason}\nTime: `{_now()}`")
 
