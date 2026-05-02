@@ -37,12 +37,26 @@ Iron-Sentry is a fully autonomous **statistical arbitrage / pairs trading system
 |---|---|
 | **Strategy** | Statistical Pairs Trading (Mean Reversion) |
 | **Universe** | INFY/TCS · HDFCBANK/ICICIBANK · TATAMOTORS/M&M |
-| **Entry Signal** | Z-score > ±2.5 (OLS hedge ratio, 30-bar rolling window) |
+| **Entry Signal** | Z-score > ±1.5 (OLS hedge ratio, 20-bar rolling window) |
 | **Exit Signal** | Z-score reverts to 0 |
 | **Stop-Loss** | Z-score > ±4.0 (spread blowout) |
+| **Daily Guarantee** | ≥1 trade/day — forced entry at 14:00 IST if no organic signal fires |
 | **Starting Capital** | ₹5,000 |
 | **Target** | ₹16,700/week by Month 5–6 |
 | **Leverage** | 1x (Month 1–2) → 5x (Month 5–6) |
+
+---
+
+## 🎯 Daily Trade Guarantee
+
+The bot guarantees **at least 1 trade per trading day**. If no organic z-score signal fires by `FORCED_ENTRY_TIME` (default 14:00 IST), the bot selects the idle pair with the highest |z-score| and force-enters in the direction the spread indicates — no minimum threshold required.
+
+| Config Key | Default | Purpose |
+|---|---|---|
+| `DAILY_MIN_TRADES` | `1` | Minimum trades per day |
+| `FORCED_ENTRY_TIME` | `"14:00"` | Cutoff time for forced entry (IST) |
+| `ZSCORE_ENTRY` | `1.5` | Organic entry threshold (reduced from 2.5) |
+| `ZSCORE_WINDOW` | `20` | Rolling window in bars (reduced from 30) |
 
 ---
 
