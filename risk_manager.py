@@ -115,11 +115,12 @@ class RiskManager:
 
     def status(self) -> dict:
         return {
-            "halted":      self._halted,
-            "halt_reason": self._halt_reason,
-            "daily_high":  self.daily_high,
-            "ghost_pairs": [p for p, l in self._pending_legs.items()
-                            if l.get("A") != l.get("B")],
+            "halted":        self._halted,
+            "halt_reason":   self._halt_reason,
+            "daily_high":    self.daily_high,
+            "ghost_pairs":   [p for p, l in self._pending_legs.items()
+                              if l.get("A") != l.get("B")],
+            "daily_trades":  self.daily_trade_count,
         }
 
     # ── Internals ─────────────────────────────────────────────────────────────
