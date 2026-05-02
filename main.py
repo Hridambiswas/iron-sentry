@@ -340,9 +340,10 @@ async def main():
                         await w.force_close(prices)
             else:
                 # Fan-out: all pair workers tick concurrently
-                await asyncio.gather(*[
+                tick_results = await asyncio.gather(*[
                     w.tick(prices, bar_date, open_pairs) for w in workers
                 ])
+                _trades_today += sum(1 for opened in tick_results if opened)
 
             # Daily delivery strategy — check every hour, engine only updates on new bar
             await asyncio.sleep(3600)
