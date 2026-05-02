@@ -6,7 +6,7 @@ import logging
 import logging.handlers
 from datetime import datetime, time as _dtime
 import yfinance as yf
-from config import PAIRS, STARTING_CAPITAL, PAPER_TRADING, LOG_FILE, MAX_CONCURRENT_PAIRS, FORCE_CLOSE_TIME
+from config import PAIRS, STARTING_CAPITAL, PAPER_TRADING, LOG_FILE, MAX_CONCURRENT_PAIRS, FORCE_CLOSE_TIME, DAILY_MIN_TRADES, FORCED_ENTRY_TIME
 from zscore_engine  import ZScoreEngine
 from telegram_bot   import TelegramBot
 from paper_trader   import PaperTrader
