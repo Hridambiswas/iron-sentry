@@ -36,6 +36,7 @@ class PaperTrader:
         self.positions: dict[str, dict] = {}   # symbol → {qty, avg_price, side}
         self._db = sqlite3.connect(DB_PATH, check_same_thread=False)
         self._init_db()
+        self.daily_trade_count: int = 0
 
     # ── DB Setup ──────────────────────────────────────────────────────────────
 
