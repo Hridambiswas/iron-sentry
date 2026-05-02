@@ -132,7 +132,8 @@ class TelegramBot:
                 f"━━━━━━━━━━━━━━━\n"
                 f"💰 Capital   : ₹`{self._equity:,.2f}`\n"
                 f"🏦 Started   : ₹`{self._starting:,.2f}`\n"
-                f"{direction} P&L      : ₹`{pnl:+,.2f}` (`{pnl_pct:+.2f}%`)"
+                f"{direction} P&L      : ₹`{pnl:+,.2f}` (`{pnl_pct:+.2f}%`)\n"
+                f"📊 Trades today : `{self._daily_trades}/{DAILY_MIN_TRADES}`"
             )
 
 
