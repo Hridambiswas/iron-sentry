@@ -277,6 +277,14 @@ async def warmup_engines(workers: list) -> str:
     return last_bar_date
 
 
+def _find_best_idle_worker(workers: list) -> "PairWorker | None":
+    """Pick the idle worker with the highest |z-score|, or None if unavailable."""
+    idle = [w for w in workers if not w.in_trade and w.engine.last_signal is not None]
+    if not idle:
+        return None
+    return max(idle, key=lambda w: abs(w.engine.last_zscore))
+
+
 async def main():
     logger.info("=" * 60)
     logger.info("  Iron-Sentry starting up")
