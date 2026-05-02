@@ -18,6 +18,7 @@ class TelegramBot:
         self._heartbeat_task: asyncio.Task | None = None
         self._equity: float = STARTING_CAPITAL
         self._starting: float = STARTING_CAPITAL
+        self._daily_trades: int = 0
 
     def update_equity(self, equity: float):
         self._equity = equity
