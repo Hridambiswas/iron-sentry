@@ -57,6 +57,7 @@ MAX_PRICE_AGE_SEC      = 30    # reject stale ticks older than 30 seconds
 MIN_PROFIT_THRESHOLD   = 0.002 # 0.2% minimum — delivery cost is only 0.1%, this gives 2x buffer
 MAX_CONCURRENT_PAIRS   = 1     # 1 pair at a time — preserves capital, avoid correlated blowups
 DAILY_MIN_TRADES       = 1     # minimum trades per trading day
+FORCED_ENTRY_TIME      = "14:00"  # force-entry cutoff if no trades by this time (IST)
 
 # ─── NSE Holidays 2026 ───────────────────────────────────────────────────────
 NSE_HOLIDAYS: List[str] = [
