@@ -104,6 +104,8 @@ class PaperTrader:
             leg       = leg,
         )
         self._persist_trade(order)
+        if leg == "A":
+            self.daily_trade_count += 1
         self._snapshot_equity()
         logger.info(f"[PAPER] {side} {symbol} x{qty} @ ₹{filled_at:.2f}")
         return order
@@ -143,6 +145,9 @@ class PaperTrader:
             for p in self.positions.values()
         )
         return round(self.capital + open_value, 2)
+
+    def reset_daily(self):
+        self.daily_trade_count = 0
 
     @property
     def realised_pnl(self) -> float:
